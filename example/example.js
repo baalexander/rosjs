@@ -8,6 +8,12 @@ var log = function(message) {
 };
 
 window.onload = function() {
+  var rosbridge = new Rosbridge();
+  var ros = new ROS(rosbridge);
+
+  ros.on('error', function(error) {
+    console.error(error);
+  });
 
   ros.types([
     'geometry_msgs/Twist'
