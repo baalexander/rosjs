@@ -1,6 +1,13 @@
-var ros = (function() {
+var ROS = (function() {
 
-  var ros = {};
+  var ros = function(backing) {
+    if ((this instanceof ros) === false) {
+      return new ros(backing);
+    }
+
+    this.backing = backing;
+  }
+  ros.prototype.__proto__ = EventEmitter2.prototype;
 
   // Messages
   // --------
@@ -9,7 +16,7 @@ var ros = (function() {
     this.type = type;
   };
 
-  ros.types = function(types, callback) {
+  ros.prototype.types = function(types, callback) {
     var that = this;
 
     var messages = [];
@@ -42,9 +49,9 @@ var ros = (function() {
   };
   ros.topic.prototype.__proto__ = EventEmitter2.prototype;
 
-  ros.node = function(name) {
-    if ((this instanceof ros.node) === false) {
-      return new ros.node(name);
+  ros.prototype.node = function(name) {
+    if ((this instanceof ros.prototype.node) === false) {
+      return new ros.prototype.node(name);
     }
 
     this.topics = function(topics, callback) {
@@ -68,6 +75,7 @@ var ros = (function() {
       });
     };
   };
+  ros.prototype.node.prototype.__proto__ = EventEmitter2.prototype;
 
   // Services
   // --------
@@ -85,7 +93,7 @@ var ros = (function() {
   }
   ros.service.prototype.__proto__ = EventEmitter2.prototype;
 
-  ros.services = function(services, callback) {
+  ros.prototype.services = function(services, callback) {
     var that = this;
 
     var sockets = [];
@@ -131,7 +139,7 @@ var ros = (function() {
   }
   ros.param.prototype.__proto__ = EventEmitter2.prototype;
 
-  ros.params = function(params, callback) {
+  ros.prototype.params = function(params, callback) {
     var that = this;
 
     var sockets = [];
@@ -151,7 +159,6 @@ var ros = (function() {
       socket.connect();
     });
   };
-
 
   return ros;
 

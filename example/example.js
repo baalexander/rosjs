@@ -8,6 +8,11 @@ var log = function(message) {
 };
 
 window.onload = function() {
+  var ros = new ROS();
+
+  ros.on('error', function(error) {
+    console.error(error);
+  });
 
   ros.types([
     'geometry_msgs/Twist'
