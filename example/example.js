@@ -8,7 +8,8 @@ var log = function(message) {
 };
 
 window.onload = function() {
-  var ros = new ROS();
+  var rosbridge = new Rosbridge();
+  var ros = new ROS(rosbridge);
 
   ros.on('error', function(error) {
     console.error(error);
