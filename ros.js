@@ -1,121 +1,57 @@
-var ros = (function() {
+var ROS = (function() {
 
-  var ros = {};
-
-  // Messages
-  // --------
-
-  ros.message = function(type) {
-    this.type = type;
+  var ros = function(url) {
+    // connect to web socket
   };
+  ros.prototype.__proto__ = EventEmitter2.prototype;
 
-  ros.types = function(types, callback) {
+  ros.prototype.types = function(messageTypes, callback) {
     var that = this;
 
     var messages = [];
-    types.forEach(function(type) {
-      var message = new ros.message(type);
+    messageTypes.forEach(function(messageType) {
+      var message = new that.message(messageType);
       messages.push(message);
     });
 
     callback.apply(that, messages);
   };
 
-  // Topics
-  // ------
+  ros.prototype.message = function(options) {
 
-  ros.topic = function(name, type) {
-    this.name = name;
-    this.type = type;
+  };
 
-    this.connect = function() {
-      this.emit('connect');
-    };
+  ros.prototype.topic = function(options) {
+    options = options || {};
+    this.node        = options.node;
+    this.topic       = options.topic;
+    this.messageType = options.messageType;
 
     this.subscribe = function(callback) {
-      this.on('message', callback);
+      // ws.on(uniqueId, callback);
     };
 
     this.publish = function(message) {
-
+      // ws.send(uniqueId, callback);
     };
   };
-  ros.topic.prototype.__proto__ = EventEmitter2.prototype;
+  ros.prototype.topic.prototype.__proto__ = EventEmitter2.prototype;
 
-  ros.node = function(name) {
-    if ((this instanceof ros.node) === false) {
-      return new ros.node(name);
-    }
-
-    this.topics = function(topics, callback) {
-      var that = this;
-
-      var sockets = [];
-      topics.forEach(function(topic) {
-        var socket = new ros.topic(topic.topic, topic.type);
-        sockets.push(socket);
-      });
-
-      var socketsConnected = 0;
-      sockets.forEach(function(socket) {
-        socket.once('connect', function() {
-          socketsConnected++;
-          if (socketsConnected === sockets.length) {
-            callback.apply(that, sockets);
-          }
-        });
-        socket.connect();
-      });
-    };
-  };
-
-  // Services
-  // --------
-
-  ros.service = function(name) {
-    this.name = name;
-
-    this.connect = function() {
-      this.emit('connect');
-    };
+  ros.prototype.service = function(options) {
+    options = options || {};
+    this.node    = options.node;
+    this.service = options.service;
 
     this.callService = function(args, callback) {
 
     };
-  }
-  ros.service.prototype.__proto__ = EventEmitter2.prototype;
-
-  ros.services = function(services, callback) {
-    var that = this;
-
-    var sockets = [];
-    services.forEach(function(service) {
-      var socket = new ros.service(service.service);
-      sockets.push(socket);
-    });
-
-    var socketsConnected = 0;
-    sockets.forEach(function(socket) {
-      socket.once('connect', function() {
-        socketsConnected++;
-        if (socketsConnected === sockets.length) {
-          callback.apply(that, sockets);
-        }
-      });
-      socket.connect();
-    });
   };
+  ros.prototype.service.prototype.__proto__ = EventEmitter2.prototype;
 
-  // Params
-  // ------
-
-  ros.param = function(name) {
-    this.name = name;
-    this.value = null;
-
-    this.connect = function() {
-      this.emit('connect');
-    };
+  ros.prototype.param = function(options) {
+    this.node  = options.node;
+    this.param = options.param;
+    this.value = options.value;
 
     this.on('update', function(value) {
       this.value = value;
@@ -129,30 +65,9 @@ var ros = (function() {
 
     };
   }
-  ros.param.prototype.__proto__ = EventEmitter2.prototype;
-
-  ros.params = function(params, callback) {
-    var that = this;
-
-    var sockets = [];
-    params.forEach(function(param) {
-      var socket = new ros.param(param.param);
-      sockets.push(socket);
-    });
-
-    var socketsConnected = 0;
-    sockets.forEach(function(socket) {
-      socket.once('connect', function() {
-        socketsConnected++;
-        if (socketsConnected === sockets.length) {
-          callback.apply(that, sockets);
-        }
-      });
-      socket.connect();
-    });
-  };
-
+  ros.prototype.param.prototype.__proto__ = EventEmitter2.prototype;
 
   return ros;
 
 }());
+
