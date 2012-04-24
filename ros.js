@@ -10,15 +10,14 @@ var ROS = (function() {
 
     var messages = [];
     messageTypes.forEach(function(messageType) {
-      var message = new that.message(messageType);
+      // Request from the server the details for the message type:
+      details = {};
+      // Create the message class:
+      var message = buildMessage(details);
       messages.push(message);
     });
 
     callback.apply(that, messages);
-  };
-
-  ros.prototype.message = function(options) {
-
   };
 
   ros.prototype.topic = function(options) {
@@ -66,6 +65,48 @@ var ROS = (function() {
     };
   }
   ros.prototype.param.prototype.__proto__ = EventEmitter2.prototype;
+
+  function buildMessage(details) {
+    function message(values) {
+      if (!(this instanceof message)) {
+        return new message(values);
+      }
+
+      var that = this;
+      if (details.constants) {
+        details.constants.forEach(function(constant) {
+          that[constant.name] = constant.value || null;
+        });
+      }
+      if (details.fields) {
+        details.fields.forEach(function(field) {
+          that[field.name] = field.value || null;
+        });
+      }
+      if (values) {
+        Object.keys(values).forEach(function(name) {
+          that[name] = values[name];
+        });
+      }
+    }
+
+    message.messageType = message.prototype.messageType = details.messageType;
+    message.packageName = message.prototype.packageName = details.packageName;
+    message.messageName = message.prototype.messageName = details.messageName;
+    message.md5         = message.prototype.md5         = details.md5;
+    message.constants   = message.prototype.constants   = details.constants;
+    message.fields      = message.prototype.fields      = details.fields;
+
+    if (details.fields) {
+      details.fields.forEach(function(field) {
+        if (field.messageType) {
+          field.messageType = buildMessage(field.messageType);
+        }
+      });
+    }
+
+    return message;
+  }
 
   return ros;
 
