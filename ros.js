@@ -1,11 +1,18 @@
-var ROS = (function() {
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    define(['eventemitter2'], factory);
+  }
+  else {
+    root.ROS = factory(root.EventEmitter2);
+  }
+}(this, function (EventEmitter2) {
 
-  var socket = null;
+  var socket   = null;
   var handlers = {};
 
-  var ros = function(url) {
-    if (!(this instanceof ros)) {
-      return new ros(url);
+  var ROS = function(url) {
+    if (!(this instanceof ROS)) {
+      return new ROS(url);
     }
     var that = this;
 
@@ -29,13 +36,13 @@ var ROS = (function() {
       }
     };
   };
-  ros.prototype.__proto__ = EventEmitter2.prototype;
+  ROS.prototype.__proto__ = EventEmitter2.prototype;
 
 
   // Topics
   // ------
 
-  ros.prototype.getTopicList = function(callback) {
+  ROS.prototype.getTopicList = function(callback) {
     handlers['/rosjs/topics'] = function(data) {
       callback(data);
     };
@@ -46,7 +53,7 @@ var ROS = (function() {
     socket.send(JSON.stringify(call));
   };
 
-  ros.prototype.messageTypes = function(messageTypes, callback) {
+  ROS.prototype.messageTypes = function(messageTypes, callback) {
     var that = this;
 
     function fetchMessageTypes() {
@@ -70,9 +77,9 @@ var ROS = (function() {
     }
   };
 
-  ros.prototype.topic = function(options) {
-    if (!(this instanceof ros.prototype.topic)) {
-      return new ros.prototype.topic(options);
+  ROS.prototype.topic = function(options) {
+    if (!(this instanceof ROS.prototype.topic)) {
+      return new ROS.prototype.topic(options);
     }
     var that = this;
 
@@ -119,7 +126,7 @@ var ROS = (function() {
       socket.send(JSON.stringify(call));
     };
   };
-  ros.prototype.topic.prototype.__proto__ = EventEmitter2.prototype;
+  ROS.prototype.topic.prototype.__proto__ = EventEmitter2.prototype;
 
   function buildMessage(details) {
     function message(values) {
@@ -154,7 +161,7 @@ var ROS = (function() {
   // Services
   // --------
 
-  ros.prototype.getServiceList = function (callback) {
+  ROS.prototype.getServiceList = function (callback) {
     handlers['/rosjs/services'] = function(data) {
       callback(data);
     };
@@ -165,7 +172,7 @@ var ROS = (function() {
     socket.send(JSON.stringify(call));
   };
 
-  ros.prototype.serviceTypes = function(serviceTypes, callback) {
+  ROS.prototype.serviceTypes = function(serviceTypes, callback) {
     var that = this;
 
     function fetchServiceTypes() {
@@ -189,9 +196,9 @@ var ROS = (function() {
     }
   };
 
-  ros.prototype.service = function(options) {
-    if (!(this instanceof ros.prototype.service)) {
-      return new ros.prototype.service(options);
+  ROS.prototype.service = function(options) {
+    if (!(this instanceof ROS.prototype.service)) {
+      return new ROS.prototype.service(options);
     }
     var that = this;
 
@@ -211,7 +218,7 @@ var ROS = (function() {
       socket.send(JSON.stringify(call));
     };
   };
-  ros.prototype.service.prototype.__proto__ = EventEmitter2.prototype;
+  ROS.prototype.service.prototype.__proto__ = EventEmitter2.prototype;
 
   function buildService(details) {
 
@@ -271,7 +278,7 @@ var ROS = (function() {
   // Params
   // ------
 
-  ros.prototype.getParamList = function(callback) {
+  ROS.prototype.getParamList = function(callback) {
     handlers['/rosjs/get_param_names'] = function(data) {
       callback(data);
     };
@@ -282,9 +289,9 @@ var ROS = (function() {
     socket.send(JSON.stringify(call));
   };
 
-  ros.prototype.param = function(options) {
-    if (!(this instanceof ros.prototype.param)) {
-      return new ros.prototype.param(options);
+  ROS.prototype.param = function(options) {
+    if (!(this instanceof ROS.prototype.param)) {
+      return new ROS.prototype.param(options);
     }
     var that = this;
 
@@ -310,9 +317,10 @@ var ROS = (function() {
       socket.send(JSON.stringify(call));
     };
   }
-  ros.prototype.param.prototype.__proto__ = EventEmitter2.prototype;
+  ROS.prototype.param.prototype.__proto__ = EventEmitter2.prototype;
 
-  return ros;
+  return ROS;
 
-}());
+}));
+
 
