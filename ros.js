@@ -1,3 +1,10 @@
+// Ros.js can be included using <script src="ros.js"> or AMD.  The next few
+// lines provide support for both formats and are based on the Universal Module
+// Definition.
+//
+// See:
+//  * AMD - http://bryanforbes.github.com/amd-commonjs-modules-presentation/2011-10-29/)
+//  * UMD - https://github.com/umdjs/umd/blob/master/amdWeb.js
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
     define(['eventemitter2'], factory);
@@ -7,320 +14,243 @@
   }
 }(this, function (EventEmitter2) {
 
-  var socket   = null;
-  var handlers = {};
-
+  // Takes in the URL of the WebSocket server.
+  // Emits the following events:
+  //  * 'error' - there was an error with ROS
+  //  * 'connection' - connected to the WebSocket server
+  //  * 'close' - disconnected to the WebSocket server
   var ROS = function(url) {
-    if (!(this instanceof ROS)) {
-      return new ROS(url);
-    }
-    var that = this;
+    var ros = this;
 
-    socket = new WebSocket(url);
+    // Socket Handling
+    // ---------------
+
+    var socket = new WebSocket(url);
     socket.onopen = function(event) {
-      that.emit('connection', event);
+      ros.emit('connection', event);
     };
-
     socket.onclose = function(event) {
-      that.emit('close', event);
+      ros.emit('close', event);
     };
-
     socket.onerror = function(event) {
-      that.emit('error', event);
+      ros.emit('error', event);
     };
-
+    // Parses message responses from rosbridge and sends to the appropriate
+    // topic, service, or param.
     socket.onmessage = function(message) {
       var data = JSON.parse(message.data);
-      if (handlers[data.receiver]) {
-        handlers[data.receiver](data.msg);
+      if (data.receiver) {
+        ros.emit(data.receiver, data.msg);
       }
     };
+
+    // Sends the message over the WebSocket, but queues the message up if not
+    // yet connected.
+    function callOnConnection(message) {
+      var messageJson = JSON.stringify(message);
+      if (socket.readyState !== WebSocket.OPEN) {
+        ros.once('connection', function() {
+          socket.send(messageJson);
+        });
+      }
+      else {
+        socket.send(messageJson);
+      }
+    };
+
+    // Topics
+    // ------
+
+    // Retrieves list of topics in ROS as an array.
+    ros.getTopicList = function(callback) {
+      ros.once('/rosjs/topics', function(data) {
+        callback(data);
+      });
+      var call = {
+        receiver : '/rosjs/topics'
+      , msg      : []
+      };
+      callOnConnection(call);
+    };
+
+    // Message objects are used for publishing and subscribing to and from
+    // topics. Takes in an object matching the fields defined in the .msg
+    // definition file.
+    ros.Message = function(values) {
+      var message = this;
+      if (values) {
+        Object.keys(values).forEach(function(name) {
+          message[name] = values[name];
+        });
+      }
+    }
+
+    // Publish and/or subscribe to a topic in ROS. Options include:
+    //  * node - the name of the node to register under
+    //  * name - the topic name, like /cmd_vel
+    //  * messageType - the message type, like 'std_msgs/String'
+    ros.Topic = function(options) {
+      var topic         = this;
+      options           = options || {};
+      topic.node        = options.node;
+      topic.name        = options.name;
+      topic.messageType = options.messageType
+
+      // Every time a message is published for the given topic, the callback
+      // will be called with the message object.
+      topic.subscribe = function(callback) {
+        topic.on('message', function(message) {
+          callback(message);
+        });
+
+        ros.on(topic.name, function(data) {
+          var message = new ros.Message(data);
+          topic.emit('message', message);
+        });
+        var call = {
+          receiver : '/rosjs/subscribe'
+        , msg      : [topic.name, -1]
+        };
+        callOnConnection(call);
+      };
+
+      // Unregisters as a subscriber for the topic. Unsubscribing will remove
+      // all subscribe callbacks.
+      topic.unregisterSubscriber = function() {
+        ros.removeAllListeners([topic.name]);
+        var call = {
+          receiver : '/rosjs/unsubscribe'
+        , msg      : [topic.name]
+        };
+        callOnConnection(call);
+      };
+
+      // Publish the message. Takes in a ros.Message.
+      topic.publish = function(message) {
+        var call = {
+          receiver : topic.name
+        , msg      : message
+        , type     : topic.messageType
+        };
+        callOnConnection(call);
+      };
+    };
+    ros.Topic.prototype.__proto__ = EventEmitter2.prototype;
+
+    // Services
+    // --------
+
+    // Retrieves list of active service names in ROS as an array.
+    ros.getServiceList = function(callback) {
+      ros.once('/rosjs/services', function(data) {
+        callback(data);
+      });
+      var call = {
+        receiver : '/rosjs/services'
+      , msg      : []
+      };
+      callOnConnection(call);
+    };
+
+    // A ServiceRequest is passed into the service call. Takes in an object
+    // matching the values of the request part from the .srv file.
+    ros.ServiceRequest = function(values) {
+      var serviceRequest = this;
+      if (values) {
+        Object.keys(values).forEach(function(name) {
+          serviceRequest[name] = values[name];
+        });
+      }
+    }
+
+    // A ServiceResponse is returned from the service call. Takes in an object
+    // matching the values of the response part from the .srv file.
+    ros.ServiceResponse = function(values) {
+      var serviceResponse = this;
+      if (values) {
+        Object.keys(values).forEach(function(name) {
+          serviceResponse[name] = values[name];
+        });
+      }
+    }
+
+    // A ROS service client. Options include:
+    //  * name - the service name, like /add_two_ints
+    //  * serviceType - the service type, like 'rospy_tutorials/AddTwoInts'
+    ros.Service = function(options) {
+      var service         = this;
+      options             = options || {};
+      service.name        = options.name;
+      service.serviceType = options.serviceType;
+
+      // Calls the service. Returns the service response in the callback.
+      service.callService = function(request, callback) {
+        ros.once(service.name, function(data) {
+          var response = new ros.ServiceResponse(data);
+          callback(response);
+        });
+        var requestValues = [];
+        Object.keys(request).forEach(function(name) {
+          requestValues.push(request[name]);
+        });
+        var call = {
+          receiver : service.name
+        , msg      : requestValues
+        };
+        callOnConnection(call);
+      };
+    };
+    ros.Service.prototype.__proto__ = EventEmitter2.prototype;
+
+    // Params
+    // ------
+
+    // Retrieves list of param names from the ROS Parameter Server as an array.
+    ros.getParamList = function(callback) {
+      ros.once('/rosjs/get_param_names', function(data) {
+        callback(data);
+      });
+      var call = {
+        receiver : '/rosjs/get_param_names'
+      , msg      : []
+      };
+      callOnConnection(call);
+    };
+
+    // A ROS param. Options include:
+    //  * name - the param name, like max_vel_x
+    ros.Param = function(options) {
+      var param  = this;
+      options    = options || {};
+      param.name = options.name;
+
+      // Fetches the value of the param and returns in the callback.
+      param.get = function(callback) {
+        ros.once('/rosjs/get_param', function(value) {
+          callback(value);
+        });
+        var call = {
+          receiver : '/rosjs/get_param'
+        , msg      : [param.name]
+        };
+        callOnConnection(call);
+      };
+
+      // Sets the value of the param in ROS.
+      param.set = function(value) {
+        var call = {
+          receiver : '/rosjs/set_param'
+        , msg      : [param.name, value]
+        };
+        callOnConnection(call);
+      };
+    }
+    ros.Param.prototype.__proto__ = EventEmitter2.prototype;
+
   };
   ROS.prototype.__proto__ = EventEmitter2.prototype;
-
-
-  // Topics
-  // ------
-
-  ROS.prototype.getTopicList = function(callback) {
-    handlers['/rosjs/topics'] = function(data) {
-      callback(data);
-    };
-    var call = {
-      receiver : '/rosjs/topics'
-    , msg      : []
-    };
-    socket.send(JSON.stringify(call));
-  };
-
-  ROS.prototype.messageTypes = function(messageTypes, callback) {
-    var that = this;
-
-    function fetchMessageTypes() {
-      var messages = [];
-      messageTypes.forEach(function(messageType) {
-        details = {
-          messageType: messageType
-        };
-        var message = buildMessage(details);
-        messages.push(message);
-      });
-
-      callback.apply(that, messages);
-    }
-
-    if (socket.readyState !== WebSocket.OPEN) {
-      that.on('connection', fetchMessageTypes);
-    }
-    else {
-      fetchMessageTypes();
-    }
-  };
-
-  ROS.prototype.topic = function(options) {
-    if (!(this instanceof ROS.prototype.topic)) {
-      return new ROS.prototype.topic(options);
-    }
-    var that = this;
-
-    options          = options || {};
-    that.node        = options.node;
-    that.name        = options.name;
-    that.messageType = options.messageType
-
-    that.subscribe = function(callback) {
-      that.on('message', function(message) {
-        callback(message);
-      });
-
-      handlers[that.name] = function(data) {
-        var message = new that.messageType(data);
-        that.emit('message', message);
-      };
-      var call = {
-        receiver : '/rosjs/subscribe'
-      , msg      : [
-          that.name
-        , -1
-        ]
-      };
-      socket.send(JSON.stringify(call));
-    };
-
-    that.unregisterSubscriber = function() {
-      var call = {
-        receiver : '/rosjs/unsubscribe'
-      , msg      : [that.name]
-      };
-
-      socket.send(JSON.stringify(call));
-    };
-
-    that.publish = function(message) {
-      var call = {
-        receiver : that.name
-      , msg      : message.toJSON()
-      , type     : that.messageType.messageType
-      };
-
-      socket.send(JSON.stringify(call));
-    };
-  };
-  ROS.prototype.topic.prototype.__proto__ = EventEmitter2.prototype;
-
-  function buildMessage(details) {
-    function message(values) {
-      if (!(this instanceof message)) {
-        return new message(values);
-      }
-
-      var that = this;
-      if (values) {
-        Object.keys(values).forEach(function(name) {
-          that[name] = values[name];
-        });
-      }
-
-      that.toJSON = function() {
-        var object = {};
-        Object.keys(that).forEach(function(name) {
-          if (name !== 'messageType') {
-            object[name] = that[name];
-          }
-        });
-        return object;
-      };
-    }
-
-    message.messageType = details.messageType;
-
-    return message;
-  }
-
-
-  // Services
-  // --------
-
-  ROS.prototype.getServiceList = function (callback) {
-    handlers['/rosjs/services'] = function(data) {
-      callback(data);
-    };
-    var call = {
-      receiver : '/rosjs/services'
-    , msg      : []
-    };
-    socket.send(JSON.stringify(call));
-  };
-
-  ROS.prototype.serviceTypes = function(serviceTypes, callback) {
-    var that = this;
-
-    function fetchServiceTypes() {
-      var services = [];
-      serviceTypes.forEach(function(serviceType) {
-        details = {
-          serviceType: serviceType
-        };
-        var service = buildService(details);
-        services.push(service);
-      });
-
-      callback.apply(that, services);
-    }
-
-    if (socket.readyState !== WebSocket.OPEN) {
-      that.on('connection', fetchServiceTypes);
-    }
-    else {
-      fetchServiceTypes();
-    }
-  };
-
-  ROS.prototype.service = function(options) {
-    if (!(this instanceof ROS.prototype.service)) {
-      return new ROS.prototype.service(options);
-    }
-    var that = this;
-
-    options          = options || {};
-    that.name        = options.name;
-    that.serviceType = options.serviceType;
-
-    that.callService = function(service, callback) {
-      handlers[that.name] = function(data) {
-        var response = new that.serviceType.response(data);
-        callback(response);
-      };
-      var call = {
-        receiver : that.name
-      , msg      : service.toJSON()
-      };
-      socket.send(JSON.stringify(call));
-    };
-  };
-  ROS.prototype.service.prototype.__proto__ = EventEmitter2.prototype;
-
-  function buildService(details) {
-
-    function request(values) {
-      if (!(this instanceof request)) {
-        return new request(values);
-      }
-
-      var that = this;
-      if (values) {
-        Object.keys(values).forEach(function(name) {
-          that[name] = values[name];
-        });
-      }
-
-      that.toJSON = function() {
-        var values = [];
-        Object.keys(that).forEach(function(name) {
-          if (typeof that[name] !== 'function') {
-            values.push(that[name]);
-          }
-        });
-        return values;
-      };
-    }
-
-    function response(values) {
-      if (!(this instanceof response)) {
-        return new response(values);
-      }
-
-      var that = this;
-      if (values) {
-        Object.keys(values).forEach(function(name) {
-          that[name] = values[name];
-        });
-      }
-
-      that.toJSON = function() {
-        var values = [];
-        Object.keys(that).forEach(function(name) {
-          if (typeof that[name] !== 'function') {
-            values.push(that[name]);
-          }
-        });
-      };
-    }
-
-    return {
-      request     : request
-    , response    : response
-    , serviceType : details.serviceType
-    };
-  }
-
-
-  // Params
-  // ------
-
-  ROS.prototype.getParamList = function(callback) {
-    handlers['/rosjs/get_param_names'] = function(data) {
-      callback(data);
-    };
-    var call = {
-      receiver : '/rosjs/get_param_names'
-    , msg      : []
-    };
-    socket.send(JSON.stringify(call));
-  };
-
-  ROS.prototype.param = function(options) {
-    if (!(this instanceof ROS.prototype.param)) {
-      return new ROS.prototype.param(options);
-    }
-    var that = this;
-
-    options    = options || {};
-    that.name  = options.name;
-
-    that.get = function(callback) {
-      handlers['/rosjs/get_param'] = function(value) {
-        callback(value);
-      };
-      var call = {
-        receiver : '/rosjs/get_param'
-      , msg      : [that.name]
-      };
-      socket.send(JSON.stringify(call));
-    };
-
-    that.set = function(value) {
-      var call = {
-        receiver : '/rosjs/set_param'
-      , msg      : [that.name, value]
-      };
-      socket.send(JSON.stringify(call));
-    };
-  }
-  ROS.prototype.param.prototype.__proto__ = EventEmitter2.prototype;
 
   return ROS;
 
 }));
-
 
