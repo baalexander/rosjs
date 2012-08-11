@@ -22,6 +22,9 @@
   var ROS = function(url) {
     var ros = this;
 
+    // Provides a unique ID for each message sent to the server.
+    ros.idCounter = 0;
+
     // Socket Handling
     // ---------------
 
@@ -39,8 +42,11 @@
     // topic, service, or param.
     socket.onmessage = function(message) {
       var data = JSON.parse(message.data);
-      if (data.receiver) {
-        ros.emit(data.receiver, data.msg);
+      if (data.op === 'publish') {
+        ros.emit(data.topic, data.msg);
+      }
+      else if (data.op === 'service_response') {
+        ros.emit(data.id, data.values);
       }
     };
 
@@ -62,15 +68,17 @@
     // ------
 
     // Retrieves list of topics in ROS as an array.
-    ros.getTopicList = function(callback) {
-      ros.once('/rosjs/topics', function(data) {
-        callback(data);
+    ros.getTopics = function(callback) {
+      var topicsClient = new ros.Service({
+        name        : '/rosapi/topics'
+      , serviceType : 'rosapi/Topics'
       });
-      var call = {
-        receiver : '/rosjs/topics'
-      , msg      : []
-      };
-      callOnConnection(call);
+
+      var request = new ros.ServiceRequest();
+
+      topicsClient.callService(request, function(result) {
+        callback(result.topics);
+      });
     };
 
     // Message objects are used for publishing and subscribing to and from
@@ -90,11 +98,12 @@
     //  * name - the topic name, like /cmd_vel
     //  * messageType - the message type, like 'std_msgs/String'
     ros.Topic = function(options) {
-      var topic         = this;
-      options           = options || {};
-      topic.node        = options.node;
-      topic.name        = options.name;
-      topic.messageType = options.messageType
+      var topic          = this;
+      options            = options || {};
+      topic.node         = options.node;
+      topic.name         = options.name;
+      topic.messageType  = options.messageType;
+      topic.isAdvertised = false;
 
       // Every time a message is published for the given topic, the callback
       // will be called with the message object.
@@ -107,30 +116,72 @@
           var message = new ros.Message(data);
           topic.emit('message', message);
         });
+
+        ros.idCounter++;
+        var subscribeId = 'subscribe:' + topic.name + ':' + ros.idCounter;
         var call = {
-          receiver : '/rosjs/subscribe'
-        , msg      : [topic.name, -1]
+          op    : 'subscribe'
+        , id    : subscribeId
+        , type  : topic.messageType
+        , topic : topic.name
         };
         callOnConnection(call);
       };
 
       // Unregisters as a subscriber for the topic. Unsubscribing will remove
       // all subscribe callbacks.
-      topic.unregisterSubscriber = function() {
+      topic.unsubscribe = function() {
         ros.removeAllListeners([topic.name]);
+        ros.idCounter++;
+        var unsubscribeId = 'unsubscribe:' + topic.name + ':' + ros.idCounter;
         var call = {
-          receiver : '/rosjs/unsubscribe'
-        , msg      : [topic.name]
+          op    : 'unsubscribe'
+        , id    : unsubscribeId
+        , topic : topic.name
         };
         callOnConnection(call);
       };
 
+      // Registers as a publisher for the topic.
+      topic.advertise = function() {
+        ros.idCounter++;
+        var advertiseId = 'advertise:' + topic.name + ':' + ros.idCounter;
+        var call = {
+          op    : 'advertise'
+        , id    : advertiseId
+        , type  : topic.messageType
+        , topic : topic.name
+        };
+        callOnConnection(call);
+        topic.isAdvertised = true;
+      };
+
+      // Unregisters as a publisher for the topic.
+      topic.unadvertise = function() {
+        ros.idCounter++;
+        var unadvertiseId = 'unadvertise:' + topic.name + ':' + ros.idCounter;
+        var call = {
+          op    : 'unadvertise'
+        , id    : unadvertiseId
+        , topic : topic.name
+        };
+        callOnConnection(call);
+        topic.isAdvertised = false;
+      };
+
       // Publish the message. Takes in a ros.Message.
       topic.publish = function(message) {
+        if (!topic.isAdvertised) {
+          topic.advertise();
+        }
+
+        ros.idCounter++;
+        var publishId = 'publish:' + topic.name + ':' + ros.idCounter;
         var call = {
-          receiver : topic.name
-        , msg      : message
-        , type     : topic.messageType
+          op    : 'publish'
+        , id    : publishId
+        , topic : topic.name
+        , msg   : message
         };
         callOnConnection(call);
       };
@@ -141,15 +192,17 @@
     // --------
 
     // Retrieves list of active service names in ROS as an array.
-    ros.getServiceList = function(callback) {
-      ros.once('/rosjs/services', function(data) {
-        callback(data);
+    ros.getServices = function(callback) {
+      var servicesClient = new ros.Service({
+        name        : '/rosapi/services'
+      , serviceType : 'rosapi/Services'
       });
-      var call = {
-        receiver : '/rosjs/services'
-      , msg      : []
-      };
-      callOnConnection(call);
+
+      var request = new ros.ServiceRequest();
+
+      servicesClient.callService(request, function(result) {
+        callback(result.services);
+      });
     };
 
     // A ServiceRequest is passed into the service call. Takes in an object
@@ -185,17 +238,24 @@
 
       // Calls the service. Returns the service response in the callback.
       service.callService = function(request, callback) {
-        ros.once(service.name, function(data) {
+        ros.idCounter++;
+        serviceCallId = 'call_service:' + service.name + ':' + ros.idCounter;
+
+        ros.once(serviceCallId, function(data) {
           var response = new ros.ServiceResponse(data);
           callback(response);
         });
+
         var requestValues = [];
         Object.keys(request).forEach(function(name) {
           requestValues.push(request[name]);
         });
+
         var call = {
-          receiver : service.name
-        , msg      : requestValues
+          op      : 'call_service'
+        , id      : serviceCallId
+        , service : service.name
+        , args    : requestValues
         };
         callOnConnection(call);
       };
@@ -206,7 +266,7 @@
     // ------
 
     // Retrieves list of param names from the ROS Parameter Server as an array.
-    ros.getParamList = function(callback) {
+    ros.getParams = function(callback) {
       ros.once('/rosjs/get_param_names', function(data) {
         callback(data);
       });
@@ -226,23 +286,27 @@
 
       // Fetches the value of the param and returns in the callback.
       param.get = function(callback) {
-        ros.once('/rosjs/get_param', function(value) {
-          callback(value);
-        });
-        var call = {
-          receiver : '/rosjs/get_param'
-        , msg      : [param.name]
-        };
-        callOnConnection(call);
+        var error = new Error('Param getting not integrated with rosbridge 2.0');
+        ros.emit('error', error);
+        // ros.once('/rosjs/get_param', function(value) {
+        //   callback(value);
+        // });
+        // var call = {
+        //   receiver : '/rosjs/get_param'
+        // , msg      : [param.name]
+        // };
+        // callOnConnection(call);
       };
 
       // Sets the value of the param in ROS.
       param.set = function(value) {
-        var call = {
-          receiver : '/rosjs/set_param'
-        , msg      : [param.name, value]
-        };
-        callOnConnection(call);
+        var error = new Error('Param setting not integrated with rosbridge 2.0');
+        ros.emit('error', error);
+        // var call = {
+        //   receiver : '/rosjs/set_param'
+        // , msg      : [param.name, value]
+        // };
+        // callOnConnection(call);
       };
     }
     ros.Param.prototype.__proto__ = EventEmitter2.prototype;

@@ -60,7 +60,7 @@ listener.subscribe(function(message) {
   console.log('Received message on ' + listener.name + ': ' + message.data);
 
   // If desired, we can unsubscribe from the topic as well.
-  listener.unregisterSubscriber();
+  listener.unsubscribe();
 });
 
 
