@@ -1,0 +1,31 @@
+[
+# Official Ros Stacks
+{'setup-file': {'local-name': '/opt/ros/fuerte/setup.sh'}},
+{'other': {'local-name': '/opt/ros/fuerte/share/ros'}},
+{'other': {'local-name': '/opt/ros/fuerte/share'}},
+{'other': {'local-name': '/opt/ros/fuerte/stacks'}},
+
+# rojsjs 
+{'git': {'local-name': 'rosjs', 'version': 'master', 'uri': 'https://github.com/RobotWebTools/rosjs.git'}},
+
+  
+# Actionlibjs 
+{'git': {'local-name': 'actionlibjs', 'version': 'master', 'uri': 'https://github.com/RobotWebTools/actionlibjs.git'}},
+
+# mjpegcanvas 
+{'git': {'local-name': 'mjpegcanvasjs', 'version': 'master', 'uri': 'https://github.com/RobotWebTools/mjpegcanvasjs.git'}},
+
+# turtlesimjs 
+{'git': {'local-name': 'turtlesimjs', 'version': 'master', 'uri': 'https://github.com/RobotWebTools/turtlesimjs.git'}},
+
+# nav2djs 
+{'git': {'local-name': 'nav2djs', 'version': 'master', 'uri': 'https://github.com/RobotWebTools/nav2djs.git'}},
+
+# keyboardteleopjs 
+{'git': {'local-name': 'keyboardteleopjs', 'version': 'master', 'uri': 'https://github.com/RobotWebTools/keyboardteleopjs.git'}},
+
+# map2djs
+{'git': {'local-name': 'map2djs', 'version': 'master', 'uri': 'https://github.com/RobotWebTools/map2djs.git'}}
+
+
+]
