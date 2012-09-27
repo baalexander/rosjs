@@ -27,7 +27,7 @@ var robotPose = new ros.Topic({
 var poseStamped = new ros.Message({
   header: {
     seq      : 0
-  , stamp    : new ros.Time().now()
+  , stamp    : 0
   , frame_id : ''
   }
 , pose: {

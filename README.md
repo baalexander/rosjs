@@ -19,6 +19,7 @@ the server with WebSockets.
    * [Get ROS system info](#get-ros-system-info)
  * [Understanding Events](#understanding-events)
  * [Handling Errors](#handling-errors)
+ * [Building](#building)
  * [Example](#example)
  * [License](#license)
 
@@ -212,7 +213,9 @@ ros.getParams(function(params) {
 
 ## Understanding Events
 
-Ros.js follows the [Observer patter](http://answers.oreilly.com/topic/2190-two-examples-of-the-observer-pattern-in-javascript/), emitting (publishing) and listening (subscribing) to events.
+Ros.js follows the [Observer
+patter](http://answers.oreilly.com/topic/2190-two-examples-of-the-observer-pattern-in-javascript/),
+emitting (publishing) and listening (subscribing) to events.
 
 [EventEmitter2](https://github.com/hij1nx/EventEmitter2) provides event support
 to ros.js. The ROS, Topic, Service, and even Param objects all extend
@@ -248,6 +251,17 @@ ros.on('error', function(error) {
   console.log('There was an error with ROS: ' + error);
 });
 ```
+
+## Building
+
+[Grunt.js](http://gruntjs.com/) provides JavaScript build utilities to rosjs,
+including linting, testing, concatenating, and minimizing. The grunt.js file in
+the project's root directory contains the config information, including where to
+place the build files (the dist directory).
+
+After grunt.js is installed, you should be able to run `grunt` from the command
+line in the root of the project to build. You can verify it worked by checking
+out the files in the dist directory.
 
 ## Example
 

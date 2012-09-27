@@ -438,7 +438,7 @@
         }
 
         if(this.wildcard) {
-          leaf._listeners.splice(position, 1);
+          leaf._listeners.splice(position, 1)
         }
         else {
           this._events[type].splice(position, 1);
