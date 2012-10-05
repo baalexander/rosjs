@@ -3,7 +3,7 @@
 	<author>Brandon Alexander</author>
 	<license>BSD</license>  
 	<review status="unreviewed" notes=""/>
-	<url>https://github.com/rosjs/rosjs</url>
+	<url>https://github.com/robotwebtools/rosjs</url>
 
 	<depend stack="ros" />
 </stack>
