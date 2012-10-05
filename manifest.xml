@@ -1,0 +1,13 @@
+<package>
+  <description brief="The core JavaScript API for ROS on the web.">
+
+    Ros.js provides the core JavaScript API for interacting with ROS via the web. Ros.js supports publishing and subscribing to topics, getting and setting parameters, and calling services in ROS. Ros.js uses rosbridge on the backend and connects to the server with WebSockets.
+  </description>
+  <author>Brandon Alexander</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>https://github.com/robotwebtools/rosjs</url>
+
+</package>
+
+
