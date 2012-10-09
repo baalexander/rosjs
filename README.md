@@ -10,6 +10,7 @@ the server with WebSockets.
  * [Set Up Rosbridge](#set-up-rosbridge)
  * [How To](#how-to)
    * [Connect to ROS](#connect-to-ros)
+   * [Disconnect from ROS](#disconnect-from-ros)
    * [Publish a topic](#publish-a-topic)
    * [Subscribe to a topic](#subscribe-to-a-topic)
    * [Call a service](#call-a-service)
@@ -32,34 +33,25 @@ WebSocket server, which ros.js connects to.
 
 To install and run rosbridge, perform the following steps:
 
- 1. Download the [rosbridge 2.0](http://kforge.ros.org/rosbridge/trac) stack
+ 1. Install the [rosbridge 2.0](http://kforge.ros.org/rosbridge/trac) stack
 
     ```bash
-    # Change into a directory on the ROS_PACKAGE_PATH,
-    # See: http://www.ros.org/wiki/ROS/EnvironmentVariables#ROS_PACKAGE_PATH
-    cd ~/ros_workspace
-    git clone http://kforge.ros.org/rosbridge/git rosbridge
+    sudo apt-get install ros-fuerte-rosbridge-suite
     ```
 
- 2. Build the rosbridge stack
-
-    ```bash
-    rosmake rosbridge
-    ```
-
- 4. Run ROS if not already running
+ 2. Run ROS if not already running
 
     ```bash
     roscore
     ```
 
- 4. Run rosapi (provides services that return information about ROS, like topic list)
+ 3. Run rosapi (provides services that return information about ROS, like topic list)
 
     ```bash
     rosrun rosapi rosapi.py
     ```
 
- 5. Run rosbridge_server (WebSocket server that rosjs will connect to)
+ 4. Run rosbridge_server (WebSocket server that rosjs will connect to)
 
     ```bash
     rosrun rosbridge_server rosbridge.py
@@ -76,6 +68,21 @@ WebSocket server.
 ```javascript
 // Connects to the rosbridge WebSocket server.
 var ros = new ROS('ws://localhost:9090');
+```
+
+or
+
+```javascript
+// Connects to the rosbridge WebSocket server.
+var ros = new ROS();
+ros.connect('ws://localhost:9090');
+```
+
+#### Disconnect from ROS
+
+```javascript
+// Disconnects from the rosbridge WebSocket server.
+ros.close();
 ```
 
 #### Publish a topic

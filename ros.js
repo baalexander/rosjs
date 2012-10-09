@@ -21,6 +21,7 @@
   //  * 'close' - disconnected to the WebSocket server
   var ROS = function(url) {
     var ros = this;
+    ros.socket = null;
 
     // Provides a unique ID for each message sent to the server.
     ros.idCounter = 0;
@@ -28,19 +29,52 @@
     // Socket Handling
     // ---------------
 
-    var socket = new WebSocket(url);
-    socket.onopen = function(event) {
+    function onOpen(event) {
       ros.emit('connection', event);
     };
-    socket.onclose = function(event) {
+
+    function onClose(event) {
       ros.emit('close', event);
     };
-    socket.onerror = function(event) {
+
+    function onError(event) {
       ros.emit('error', event);
     };
+
+    function decompressPng(data, callback) {
+      // Uncompresses the data before sending it through (use image/canvas to do so).
+      var image = new Image();
+      // When the image loads, extracts the raw data (JSON message).
+      image.onload = function() {
+        // Creates a local canvas to draw on.
+        var canvas  = document.createElement('canvas');
+        var context = canvas.getContext('2d');
+
+        // Sets width and height.
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        // Puts the data into the image.
+        context.drawImage(image, 0, 0);
+        // Grabs the raw, uncompressed data.
+        var imageData = context.getImageData(0, 0, image.width, image.height).data;
+
+        // Constructs the JSON.
+        var jsonData = '';
+        for (var i = 0; i < imageData.length; i += 4) {
+          // RGB
+          jsonData += String.fromCharCode(imageData[i], imageData[i+1], imageData[i+2]);
+        }
+        var decompressedData = JSON.parse(jsonData);
+        callback(decompressedData);
+      };
+      // Sends the image data to load.
+      image.src = 'data:image/png;base64,' + data.data;
+    }
+
     // Parses message responses from rosbridge and sends to the appropriate
     // topic, service, or param.
-    socket.onmessage = function(message) {
+    function onMessage(message) {
       function handleMessage(message) {
         if (message.op === 'publish') {
           ros.emit(message.topic, message.msg);
@@ -52,33 +86,9 @@
 
       var data = JSON.parse(message.data);
       if (data.op === 'png') {
-        // Uncompresses the data before sending it through (use image/canvas to do so).
-        var image = new Image();
-        // When the image loads, extracts the raw data (JSON message).
-        image.onload = function() {
-          // Creates a local canvas to draw on.
-          var canvas  = document.createElement('canvas');
-          var context = canvas.getContext('2d');
-
-          // Sets width and height.
-          canvas.width = image.width;
-          canvas.height = image.height;
-
-          // Puts the data into the image.
-          context.drawImage(image, 0, 0);
-          // Grabs the raw, uncompressed data.
-          var imageData = context.getImageData(0, 0, image.width, image.height).data;
-
-          // Constructs the JSON.
-          var jsonData = '';
-          for (var i = 0; i < imageData.length; i += 4) {
-            // RGB
-            jsonData += String.fromCharCode(imageData[i], imageData[i+1], imageData[i+2]);
-          }
-          handleMessage(JSON.parse(jsonData));
-        };
-        // Sends the image data to load.
-        image.src = 'data:image/png;base64,' + data.data;
+        decompressPng(data, function(decompressedData) {
+          handleMessage(decompressedData);
+        });
       }
       else {
         handleMessage(data);
@@ -90,15 +100,35 @@
     function callOnConnection(message) {
       var messageJson = JSON.stringify(message);
 
-      if (socket.readyState !== WebSocket.OPEN) {
+      if (ros.socket.readyState !== WebSocket.OPEN) {
         ros.once('connection', function() {
-          socket.send(messageJson);
+          ros.socket.send(messageJson);
         });
       }
       else {
-        socket.send(messageJson);
+        ros.socket.send(messageJson);
       }
     };
+
+    // Connect to the specified WebSocket
+    ros.connect = function(url) {
+      ros.socket = new WebSocket(url);
+      ros.socket.onopen    = onOpen;
+      ros.socket.onclose   = onClose;
+      ros.socket.onerror   = onError;
+      ros.socket.onmessage = onMessage;
+    };
+
+    // Disconnect from the WebSocket
+    ros.close = function() {
+      if (ros.socket) {
+        ros.socket.close();
+      }
+    };
+
+    if (url) {
+      ros.connect(url);
+    }
 
     // Topics
     // ------

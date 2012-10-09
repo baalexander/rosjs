@@ -1,14 +1,15 @@
 
 // Connecting to ROS
 // -----------------
-
-// Create a connection to the rosbridge WebSocket server.
-var ros = new ROS('ws://localhost:9090');
+var ros = new ROS();
 
 // If there is an error on the backend, an 'error' emit will be emitted.
 ros.on('error', function(error) {
   console.log(error);
 });
+
+// Create a connection to the rosbridge WebSocket server.
+ros.connect('ws://localhost:9090');
 
 
 // Publishing a Topic
