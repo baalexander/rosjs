@@ -116,13 +116,13 @@ cmdVel.publish(twist);
 #### Subscribe to a topic
 
 ```javascript
-// Create a std_msgs/String topic named /listener.
+// Listen to the topic '/chatter' of type std_msgs/String.
 var listener = new ros.Topic({
-  name        : '/listener'
+  name        : '/chatter'
 , messageType : 'std_msgs/String'
 });
 
-// Any time a message is published to the /listener topic, the callback will
+// Any time a message is published to the /chatter topic, the callback will
 // fire.
 listener.subscribe(function(message) {
   // message is an instance of ros.Message.
