@@ -116,15 +116,15 @@ cmdVel.publish(twist);
 #### Subscribe to a topic
 
 ```javascript
-// Listen to the topic '/chatter' of type std_msgs/String.
-var listener = new ros.Topic({
+// Create a handle for the topic '/chatter' of type std_msgs/String.
+var chatter = new ros.Topic({
   name        : '/chatter'
 , messageType : 'std_msgs/String'
 });
 
-// Any time a message is published to the /chatter topic, the callback will
-// fire.
-listener.subscribe(function(message) {
+// Any time a message is published to the /chatter topic,
+// the callback will fire.
+chatter.subscribe(function(message) {
   // message is an instance of ros.Message.
   console.log('Received message ' + message.data);
 });
@@ -135,7 +135,7 @@ listener.subscribe(function(message) {
 ```javascript
 // ros.Service provides an interface to calling ROS services.
 // Creates a rospy_tutorials/AddTwoInts service client named /add_two_ints.
-var addTwoIntsClient = new ros.Service({
+var addTwoInts = new ros.Service({
   name        : '/add_two_ints'
 , serviceType : 'rospy_tutorials/AddTwoInts'
 });
@@ -145,8 +145,8 @@ var request = new ros.ServiceRequest({ A: 1, B: 2});
 
 // Calls the rospy_tutorials/AddTwoInts service with the result stored in the
 // callback.
-addTwoIntsClient.callService(request, function(result) {
-  console.log('Result for service call on ' + addTwoIntsClient.name + ': ' + result.sum);
+addTwoInts.callService(request, function(result) {
+  console.log('Result for service call on ' + addTwoInts.name + ': ' + result.sum);
 });
 ```
 
