@@ -171,10 +171,17 @@
       topic.messageType  = options.messageType;
       topic.isAdvertised = false;
       topic.compression  = options.compression || 'none';
+      topic.throttle_rate = options.throttle_rate || 0;
 
       // Check for valid compression types
       if (topic.compression && topic.compression !== 'png' && topic.compression !== 'none') {
         topic.emit('warning', topic.compression + ' compression is not supported. No comression will be used.');
+      }
+
+      // Check if throttle rate is negative
+      if(topic.throttle_rate < 0) {
+        topic.emit('warning',topic.throttle_rate + ' is not allowed. Set to 0');
+        topic.throttle_rate = 0;
       }
 
       // Every time a message is published for the given topic, the callback
@@ -197,6 +204,7 @@
         , type        : topic.messageType
         , topic       : topic.name
         , compression : topic.compression
+        , throttle_rate : topic.throttle_rate
         };
 
         callOnConnection(call);
