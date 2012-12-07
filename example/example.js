@@ -27,21 +27,21 @@ var robotPose = new ros.Topic({
 // definition.
 var poseStamped = new ros.Message({
   header: {
-    seq      : 0
-  , stamp    : 0
-  , frame_id : ''
-  }
-, pose: {
+    seq      : 0,
+    stamp    : 0,
+    frame_id : ''
+  },
+  pose: {
     position: {
-      x : 36
-    , y : 42
-    , z : 0
-    }
-  , orientation: {
-      x : 0
-    , y : 0
-    , z : 0
-    , w : 0
+      x : 36,
+      y : 42,
+      z : 0
+    },
+    orientation: {
+      x : 0,
+      y : 0,
+      z : 0,
+      w : 0
     }
   }
 });
@@ -57,8 +57,8 @@ robotPose.publish(poseStamped);
 // the topic's node, name, and message type. Note that we can call publish or
 // subscribe on the same topic object.
 var listener = new ros.Topic({
-  name        : '/listener'
-, messageType : 'std_msgs/String'
+  name        : '/listener',
+  messageType : 'std_msgs/String'
 });
 
 // Then we add a callback to be called every time a message is published on this
@@ -77,8 +77,8 @@ listener.subscribe(function(message) {
 // First, we create a Service client with details of the service's name and
 // service type.
 var addTwoIntsClient = new ros.Service({
-  name        : '/add_two_ints'
-, serviceType : 'rospy_tutorials/AddTwoInts'
+  name        : '/add_two_ints',
+  serviceType : 'rospy_tutorials/AddTwoInts'
 });
 
 // Then we create a Service Request. The object we pass in to

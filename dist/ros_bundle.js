@@ -546,13 +546,14 @@
 
 }(typeof process !== 'undefined' && typeof process.title !== 'undefined' && typeof exports !== 'undefined' ? exports : window);
 
-// Ros.js can be included using <script src="ros.js"> or AMD.  The next few
-// lines provide support for both formats and are based on the Universal Module
-// Definition.
-//
-// See:
-//  * AMD - http://bryanforbes.github.com/amd-commonjs-modules-presentation/2011-10-29/)
-//  * UMD - https://github.com/umdjs/umd/blob/master/amdWeb.js
+/**
+ * Ros.js can be included using <script src="ros.js"> or AMD.  The next few
+ * lines provide support for both formats and are based on the Universal Module
+ * Definition.
+ *
+ * @see AMD - http://bryanforbes.github.com/amd-commonjs-modules-presentation/2011-10-29/
+ * @see UMD - https://github.com/umdjs/umd/blob/master/amdWeb.js
+ */
 (function (root, factory) {
   if (typeof define === 'function' && define.amd) {
     define(['eventemitter2'], factory);
@@ -562,11 +563,19 @@
   }
 }(this, function (EventEmitter2) {
 
-  // Takes in the URL of the WebSocket server.
-  // Emits the following events:
-  //  * 'error' - there was an error with ROS
-  //  * 'connection' - connected to the WebSocket server
-  //  * 'close' - disconnected to the WebSocket server
+  /**
+   * Manages connection to the server and all interactions with
+   * ROS.
+   *
+   * Emits the following events:
+   *  * 'error' - there was an error with ROS
+   *  * 'connection' - connected to the WebSocket server
+   *  * 'close' - disconnected to the WebSocket server
+   *
+   *  @constructor
+   *  @param url (optional) - The WebSocket URL for rosbridge. Can be specified
+   *    later with `connect`.
+   */
   var ROS = function(url) {
     var ros = this;
     ros.socket = null;
@@ -577,18 +586,36 @@
     // Socket Handling
     // ---------------
 
+    /**
+     * Emits a 'connection' event on WebSocket connection.
+     */
     function onOpen(event) {
       ros.emit('connection', event);
     };
 
+    /**
+     * Emits a 'close' event on WebSocket disconnection.
+     */
     function onClose(event) {
       ros.emit('close', event);
     };
 
+    /**
+     * Emits an 'error' event whenever there was an error.
+     */
     function onError(event) {
       ros.emit('error', event);
     };
 
+    /**
+     * If a message was compressed as a PNG image (a compression hack since
+     * gzipping over WebSockets is not supported yet), this function places the
+     * "image" in a canvas element then decodes the "image" as a Base64 string.
+     *
+     * @param data - object containing the PNG data.
+     * @param callback function with params:
+     *   * data - the uncompressed data
+     */
     function decompressPng(data, callback) {
       // Uncompresses the data before sending it through (use image/canvas to do so).
       var image = new Image();
@@ -620,8 +647,12 @@
       image.src = 'data:image/png;base64,' + data.data;
     }
 
-    // Parses message responses from rosbridge and sends to the appropriate
-    // topic, service, or param.
+    /**
+     * Parses message responses from rosbridge and sends to the appropriate
+     * topic, service, or param.
+     *
+     * @param message - the raw JSON message from rosbridge.
+     */
     function onMessage(message) {
       function handleMessage(message) {
         if (message.op === 'publish') {
@@ -643,8 +674,10 @@
       }
     };
 
-    // Sends the message over the WebSocket, but queues the message up if not
-    // yet connected.
+    /**
+     * Sends the message over the WebSocket, but queues the message up if not
+     * yet connected.
+     */
     function callOnConnection(message) {
       var messageJson = JSON.stringify(message);
 
@@ -658,7 +691,11 @@
       }
     };
 
-    // Connect to the specified WebSocket
+    /**
+     * Connect to the specified WebSocket.
+     *
+     * @param url - WebSocket URL for Rosbridge
+     */
     ros.connect = function(url) {
       ros.socket = new WebSocket(url);
       ros.socket.onopen    = onOpen;
@@ -667,7 +704,9 @@
       ros.socket.onmessage = onMessage;
     };
 
-    // Disconnect from the WebSocket
+    /**
+     * Disconnect from the WebSocket server.
+     */
     ros.close = function() {
       if (ros.socket) {
         ros.socket.close();
@@ -681,11 +720,16 @@
     // Topics
     // ------
 
-    // Retrieves list of topics in ROS as an array.
+    /**
+     * Retrieves list of topics in ROS as an array.
+     *
+     * @param callback function with params:
+     *   * topics - Array of topic names
+     */
     ros.getTopics = function(callback) {
       var topicsClient = new ros.Service({
-        name        : '/rosapi/topics'
-      , serviceType : 'rosapi/Topics'
+        name        : '/rosapi/topics',
+        serviceType : 'rosapi/Topics'
       });
 
       var request = new ros.ServiceRequest();
@@ -695,9 +739,12 @@
       });
     };
 
-    // Message objects are used for publishing and subscribing to and from
-    // topics. Takes in an object matching the fields defined in the .msg
-    // definition file.
+    /**
+     * Message objects are used for publishing and subscribing to and from
+     * topics.
+     * @param values - object matching the fields defined in the .msg
+     *   definition file.
+     */
     ros.Message = function(values) {
       var message = this;
       if (values) {
@@ -707,10 +754,15 @@
       }
     };
 
-    // Publish and/or subscribe to a topic in ROS. Options include:
-    //  * node - the name of the node to register under
-    //  * name - the topic name, like /cmd_vel
-    //  * messageType - the message type, like 'std_msgs/String'
+    /**
+     * Publish and/or subscribe to a topic in ROS.
+     *
+     * @constructor
+     * @param options - object with following keys:
+     *   * node - the name of the node to register under
+     *   * name - the topic name, like /cmd_vel
+     *   * messageType - the message type, like 'std_msgs/String'
+     */
     ros.Topic = function(options) {
       var topic          = this;
       options            = options || {};
@@ -719,14 +771,26 @@
       topic.messageType  = options.messageType;
       topic.isAdvertised = false;
       topic.compression  = options.compression || 'none';
+      topic.throttle_rate = options.throttle_rate || 0;
 
       // Check for valid compression types
       if (topic.compression && topic.compression !== 'png' && topic.compression !== 'none') {
         topic.emit('warning', topic.compression + ' compression is not supported. No comression will be used.');
       }
 
-      // Every time a message is published for the given topic, the callback
-      // will be called with the message object.
+      // Check if throttle rate is negative
+      if (topic.throttle_rate < 0) {
+        topic.emit('warning',topic.throttle_rate + ' is not allowed. Set to 0');
+        topic.throttle_rate = 0;
+      }
+
+      /**
+       * Every time a message is published for the given topic, the callback
+       * will be called with the message object.
+       *
+       * @param callback - function with the following params:
+       *   * message - the published message
+       */
       topic.subscribe = function(callback) {
         topic.on('message', function(message) {
           callback(message);
@@ -740,58 +804,69 @@
         ros.idCounter++;
         var subscribeId = 'subscribe:' + topic.name + ':' + ros.idCounter;
         var call = {
-          op          : 'subscribe'
-        , id          : subscribeId
-        , type        : topic.messageType
-        , topic       : topic.name
-        , compression : topic.compression
+          op          : 'subscribe',
+          id          : subscribeId,
+          type        : topic.messageType,
+          topic       : topic.name,
+          compression : topic.compression,
+          throttle_rate : topic.throttle_rate
         };
 
         callOnConnection(call);
       };
 
-      // Unregisters as a subscriber for the topic. Unsubscribing will remove
-      // all subscribe callbacks.
+      /**
+       * Unregisters as a subscriber for the topic. Unsubscribing will remove
+       * all subscribe callbacks.
+       */
       topic.unsubscribe = function() {
         ros.removeAllListeners([topic.name]);
         ros.idCounter++;
         var unsubscribeId = 'unsubscribe:' + topic.name + ':' + ros.idCounter;
         var call = {
-          op    : 'unsubscribe'
-        , id    : unsubscribeId
-        , topic : topic.name
+          op    : 'unsubscribe',
+          id    : unsubscribeId,
+          topic : topic.name
         };
         callOnConnection(call);
       };
 
-      // Registers as a publisher for the topic.
+      /**
+       * Registers as a publisher for the topic.
+       */
       topic.advertise = function() {
         ros.idCounter++;
         var advertiseId = 'advertise:' + topic.name + ':' + ros.idCounter;
         var call = {
-          op    : 'advertise'
-        , id    : advertiseId
-        , type  : topic.messageType
-        , topic : topic.name
+          op    : 'advertise',
+          id    : advertiseId,
+          type  : topic.messageType,
+          topic : topic.name
         };
         callOnConnection(call);
         topic.isAdvertised = true;
       };
 
-      // Unregisters as a publisher for the topic.
+      /**
+       * Unregisters as a publisher for the topic.
+       */
       topic.unadvertise = function() {
         ros.idCounter++;
         var unadvertiseId = 'unadvertise:' + topic.name + ':' + ros.idCounter;
         var call = {
-          op    : 'unadvertise'
-        , id    : unadvertiseId
-        , topic : topic.name
+          op    : 'unadvertise',
+          id    : unadvertiseId,
+          topic : topic.name
         };
         callOnConnection(call);
         topic.isAdvertised = false;
       };
 
-      // Publish the message. Takes in a ros.Message.
+      /**
+       * Publish the message.
+       *
+       * @param message - A ROS.Message object.
+       */
       topic.publish = function(message) {
         if (!topic.isAdvertised) {
           topic.advertise();
@@ -800,10 +875,10 @@
         ros.idCounter++;
         var publishId = 'publish:' + topic.name + ':' + ros.idCounter;
         var call = {
-          op    : 'publish'
-        , id    : publishId
-        , topic : topic.name
-        , msg   : message
+          op    : 'publish',
+          id    : publishId,
+          topic : topic.name,
+          msg   : message
         };
         callOnConnection(call);
       };
@@ -813,11 +888,17 @@
     // Services
     // --------
 
-    // Retrieves list of active service names in ROS as an array.
+    /**
+     * Retrieves list of active service names in ROS.
+     *
+     * @constructor
+     * @param callback - function with the following params:
+     *   * services - array of service names
+     */
     ros.getServices = function(callback) {
       var servicesClient = new ros.Service({
-        name        : '/rosapi/services'
-      , serviceType : 'rosapi/Services'
+        name        : '/rosapi/services',
+        serviceType : 'rosapi/Services'
       });
 
       var request = new ros.ServiceRequest();
@@ -827,8 +908,13 @@
       });
     };
 
-    // A ServiceRequest is passed into the service call. Takes in an object
-    // matching the values of the request part from the .srv file.
+    /**
+     * A ServiceRequest is passed into the service call.
+     *
+     * @constructor
+     * @param values - object matching the values of the request part from the
+     *   .srv file.
+     */
     ros.ServiceRequest = function(values) {
       var serviceRequest = this;
       if (values) {
@@ -838,8 +924,12 @@
       }
     };
 
-    // A ServiceResponse is returned from the service call. Takes in an object
-    // matching the values of the response part from the .srv file.
+    /**
+     * A ServiceResponse is returned from the service call.
+     *
+     * @param values - object matching the values of the response part from the
+     *   .srv file.
+     */
     ros.ServiceResponse = function(values) {
       var serviceResponse = this;
       if (values) {
@@ -849,9 +939,14 @@
       }
     };
 
-    // A ROS service client. Options include:
-    //  * name - the service name, like /add_two_ints
-    //  * serviceType - the service type, like 'rospy_tutorials/AddTwoInts'
+    /**
+     * A ROS service client.
+     *
+     * @constructor
+     * @params options - possible keys include:
+     *   * name - the service name, like /add_two_ints
+     *   * serviceType - the service type, like 'rospy_tutorials/AddTwoInts'
+     */
     ros.Service = function(options) {
       var service         = this;
       options             = options || {};
@@ -874,10 +969,10 @@
         });
 
         var call = {
-          op      : 'call_service'
-        , id      : serviceCallId
-        , service : service.name
-        , args    : requestValues
+          op      : 'call_service',
+          id      : serviceCallId,
+          service : service.name,
+          args    : requestValues
         };
         callOnConnection(call);
       };
@@ -887,7 +982,12 @@
     // Params
     // ------
 
-    // Retrieves list of param names from the ROS Parameter Server as an array.
+    /**
+     * Retrieves list of param names from the ROS Parameter Server.
+     *
+     * @param callback function with params:
+     *  * params - array of param names.
+     */
     ros.getParams = function(callback) {
       var paramsClient = new ros.Service({
         name        : '/rosapi/get_param_names'
@@ -900,23 +1000,33 @@
       });
     };
 
-    // A ROS param. Options include:
-    //  * name - the param name, like max_vel_x
+    /**
+     * A ROS param.
+     *
+     * @constructor
+     * @param options - possible keys include:
+     *   *name - the param name, like max_vel_x
+     */
     ros.Param = function(options) {
       var param  = this;
       options    = options || {};
       param.name = options.name;
 
-      // Fetches the value of the param and returns in the callback.
+      /**
+       * Fetches the value of the param.
+       *
+       * @param callback - function with the following params:
+       *  * value - the value of the param from ROS.
+       */
       param.get = function(callback) {
         var paramClient = new ros.Service({
-          name        : '/rosapi/get_param'
-        , serviceType : 'rosapi/GetParam'
+          name        : '/rosapi/get_param',
+          serviceType : 'rosapi/GetParam'
         });
 
         var request = new ros.ServiceRequest({
-          name  : param.name
-        , value : JSON.stringify('')
+          name  : param.name,
+          value : JSON.stringify('')
         });
 
         paramClient.callService(request, function(result) {
@@ -925,16 +1035,20 @@
         });
       };
 
-      // Sets the value of the param in ROS.
+      /**
+       * Sets the value of the param in ROS.
+       *
+       * @param value - value to set param to.
+       */
       param.set = function(value) {
         var paramClient = new ros.Service({
-          name        : '/rosapi/set_param'
-        , serviceType : 'rosapi/SetParam'
+          name        : '/rosapi/set_param',
+          serviceType : 'rosapi/SetParam'
         });
 
         var request = new ros.ServiceRequest({
-          name: param.name
-        , value: JSON.stringify(value)
+          name: param.name,
+          value: JSON.stringify(value)
         });
 
         paramClient.callService(request, function() {});
@@ -946,6 +1060,5 @@
   ROS.prototype.__proto__ = EventEmitter2.prototype;
 
   return ROS;
-
 }));
 
