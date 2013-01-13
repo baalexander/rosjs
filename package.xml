@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package>
+  <name>rosjs</name>
+  <version>0.2.0</version>
+  <description>The core JavaScript API for ROS on the web.</description>
+
+  <maintainer email="balexander@willowgarage.com">Brandon Alexander</maintainer>
+  <author email="balexander@willowgarage.com">Brandon Alexander</author>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/rosjs</url>
+  <url type="bugtracker">https://github.com/WPI-RAIL/rosjs/issues</url>
+  <url type="repository">https://github.com/WPI-RAIL/rosjs</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+</package>

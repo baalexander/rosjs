@@ -6,5 +6,5 @@ topics, getting and setting parameters, and calling services in ROS.
  * [Coding Style Guide](http://www.ros.org/wiki/JavaScriptStyleGuide)
  * [How To Build with Grunt](http://ros.org/wiki/rosjs#Building)
  * [Contributors](https://github.com/RobotWebTools/rosjs/graphs/contributors)
- * [License (BSD)](https://github.com/RobotWebTools/rosjs/blob/fuerte-devel/LICENSE)
+ * [License (BSD)](https://github.com/RobotWebTools/rosjs/blob/groovy-devel/LICENSE)
 
