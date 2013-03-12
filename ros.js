@@ -507,7 +507,36 @@
       };
     };
     ros.Param.prototype.__proto__ = EventEmitter2.prototype;
-
+    
+    // Auth
+    // ------
+    
+    /**
+     * Sends an authorization request to the server.
+     *
+     * @param mac - MAC (hash) string given by the trusted source.
+     * @param client - IP of the client.
+     * @param dest - IP of the destination.
+     * @param rand - Random string given by the trusted source.
+     * @param t - Time of the authorization request.
+     * @param level - User level as a string given by the client.
+     * @param end - End time of the client's session.
+     */
+    ros.authenticate = function(mac, client, dest, rand, t, level, end) {
+      // create the request
+      var auth = {
+        op     : 'auth',
+        mac    : mac,
+        client : client,
+        dest   : dest,
+        rand   : rand,
+        t      : t,
+        level  : level,
+        end    : end
+      };
+      // send the request
+      callOnConnection(auth);
+    };
   };
   ROS.prototype.__proto__ = EventEmitter2.prototype;
 
